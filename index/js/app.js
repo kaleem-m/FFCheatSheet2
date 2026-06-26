@@ -246,6 +246,8 @@
       console.warn('Failed to load rankings-meta.json', metaRes.reason);
       state.meta = {};
     }
+    // ECR data changed — invalidate the comparisons memo.
+    bumpMetaVersion();
 
     // Build players lookup
     defaultPlayers.forEach(p => { state.players[p.id] = p; });
@@ -339,9 +341,51 @@
     return (typeof v === 'number' && !Number.isNaN(v)) ? v : null;
   }
 
+  // --- Memoisation for computeComparisons() -------------------------------
+  // computeComparisons() sorts the visible players by ECR on every call. It was
+  // being invoked on *every* render — including filter keystrokes and tab
+  // switches — and again on every drag-end via updateRankNumbers(), re-sorting
+  // the whole list each time even though nothing relevant had changed.
+  //
+  // The result depends on EXACTLY two things:
+  //   1. the input `visiblePlayerKeys` sequence (which encodes both the active
+  //      tab's player set AND the user's current order), and
+  //   2. the ECR reference data in `state.meta`.
+  // It is completely independent of the search/watchlist/hide-picked filters
+  // (those never change the input array — it is always the full, unfiltered
+  // tab order), so filtering should never trigger a re-sort.
+  //
+  // We therefore cache by a signature of the input keys plus a `metaVersion`
+  // that is bumped whenever `state.meta` is (re)assigned (load / restore /
+  // reset). A cache hit returns the previously computed Map untouched, making
+  // every filter keystroke essentially free.
+  //
+  // The cache is a tiny 2-slot LRU rather than a single slot: the hot path
+  // (render + drag-end for the ACTIVE tab) and the occasional overall-list
+  // call from exportCSV() use different inputs, so two slots keep them from
+  // evicting each other and re-sorting on the next keystroke.
+  let _metaVersion = 0;
+  function bumpMetaVersion() { _metaVersion++; }
+  const _comparisonsCache = [];          // [{ key, value }], most-recent first
+  const _COMPARISONS_CACHE_MAX = 2;
+
   // Returns a Map: playerKey -> { ecr: diff|null } for the players currently
-  // visible in the active tab (in the user's order).
+  // visible in the active tab (in the user's order). Memoised — see above.
   function computeComparisons(visiblePlayerKeys) {
+    // Signature: meta version + the exact ordered key sequence. '\n' can't
+    // appear in a player key ("p:<id>"), so it's a safe, collision-free join.
+    const cacheKey = _metaVersion + '|' + visiblePlayerKeys.join('\n');
+    const hitIdx = _comparisonsCache.findIndex(e => e.key === cacheKey);
+    if (hitIdx !== -1) {
+      const hit = _comparisonsCache[hitIdx];
+      // Promote to most-recently-used.
+      if (hitIdx !== 0) {
+        _comparisonsCache.splice(hitIdx, 1);
+        _comparisonsCache.unshift(hit);
+      }
+      return hit.value;
+    }
+
     const result = new Map();
 
     // Players in this tab that actually have an ECR value.
@@ -370,6 +414,11 @@
       result.get(k).ecr = diff;
     });
 
+    // Store as most-recently-used, evicting the oldest beyond the cap.
+    _comparisonsCache.unshift({ key: cacheKey, value: result });
+    if (_comparisonsCache.length > _COMPARISONS_CACHE_MAX) {
+      _comparisonsCache.length = _COMPARISONS_CACHE_MAX;
+    }
     return result;
   }
 
