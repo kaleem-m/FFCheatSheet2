@@ -1,0 +1,1136 @@
+/* =========================================================
+   Draft Board — Premium Dark Fantasy Cheatsheet
+   ========================================================= */
+
+:root {
+  --bg: #0a0a0c;
+  --bg-elev: #121216;
+  --bg-elev-2: #17171c;
+  --bg-row: #131318;
+  --bg-row-hover: #1a1a21;
+  --border: #25252d;
+  --border-strong: #33333d;
+  --text: #f3f3f5;
+  --text-dim: #9a9aa6;
+  --text-muted: #5f5f6b;
+  --accent: #ff5b3c;          /* warm football orange */
+  --accent-2: #ffb347;
+  --accent-glow: rgba(255, 91, 60, 0.35);
+  --star: #ffcc4d;
+  --danger: #ef4444;
+  --success: #22c55e;
+  --mine: #4f9eff;            /* "Picked By Me" — azure, distinct from
+                                 picked (green), favorited (gold) & all
+                                 position colors. Drives row tint, the action
+                                 button, the header badge and the drawer. */
+  --mine-glow: rgba(79, 158, 255, 0.35);
+  --mine-soft: rgba(79, 158, 255, 0.10);
+
+  /* position colors */
+  --qb: #ef4444;
+  --rb: #22c55e;
+  --wr: #3b82f6;
+  --te: #f59e0b;
+  --k: #8b5cf6;               /* Kicker color */
+  --dst: #14b8a6;             /* DST color */
+
+  --radius: 14px;
+  --radius-sm: 10px;
+  --shadow: 0 10px 30px rgba(0,0,0,0.45);
+  --shadow-soft: 0 4px 14px rgba(0,0,0,0.25);
+
+  --row-h: 64px;
+  --row-h-mobile: 72px;
+
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 15px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overscroll-behavior-y: none;
+}
+
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(1200px 600px at 80% -200px, rgba(255, 91, 60, 0.08), transparent 60%),
+    radial-gradient(900px 500px at -10% 10%, rgba(59, 130, 246, 0.05), transparent 60%),
+    var(--bg);
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: inherit;
+}
+
+h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
+
+/* =========================
+   Header
+   ========================= */
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(10,10,12,0.85);
+  backdrop-filter: saturate(160%) blur(14px);
+  -webkit-backdrop-filter: saturate(160%) blur(14px);
+  border-bottom: 1px solid var(--border);
+  padding-top: env(safe-area-inset-top);
+}
+
+.header-inner {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.brand { display: flex; align-items: center; gap: 12px; }
+
+.brand-mark {
+  width: 38px; height: 38px;
+  border-radius: 11px;
+  display: grid; place-items: center;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+  color: #0a0a0c;
+  font-size: 17px;
+  box-shadow: 0 6px 18px var(--accent-glow);
+}
+
+.brand-text h1 {
+  font-size: 18px;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+.brand-sub {
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.header-actions { display: flex; align-items: center; gap: 8px; position: relative; }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 14px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid var(--border);
+  transition: all 0.18s var(--ease);
+  white-space: nowrap;
+}
+.btn:hover { background: var(--bg-elev); border-color: var(--border-strong); }
+.btn:active { transform: scale(0.97); }
+
+.btn-ghost { border-color: transparent; background: var(--bg-elev); }
+.btn-ghost:hover { background: var(--bg-elev-2); }
+
+.btn-danger {
+  background: var(--danger);
+  color: #fff;
+  border-color: transparent;
+}
+.btn-danger:hover { background: #dc2626; }
+
+/* Menu dropdown */
+.menu-wrap { position: relative; }
+.menu-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 200px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 6px;
+  box-shadow: var(--shadow);
+  z-index: 60;
+  animation: fade-in 0.15s var(--ease);
+}
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--text);
+  font-weight: 500;
+  text-align: left;
+  transition: background 0.15s var(--ease);
+}
+.menu-item:hover { background: var(--bg-elev-2); }
+.menu-item.danger { color: #ff7a7a; }
+.menu-item i { width: 18px; text-align: center; color: var(--text-dim); }
+.menu-item.danger i { color: #ff7a7a; }
+.menu-sep { height: 1px; background: var(--border); margin: 4px 6px; }
+
+/* Visually-hidden utility — used by the hidden Restore file input. Keeps it
+   out of the layout & off-screen while remaining programmatically clickable. */
+.visually-hidden {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Tabs */
+.tabs {
+  position: relative;
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 12px;
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tabs::-webkit-scrollbar { display: none; }
+
+.tab {
+  position: relative;
+  padding: 12px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-dim);
+  letter-spacing: 0.01em;
+  transition: color 0.2s var(--ease);
+  white-space: nowrap;
+}
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--text); }
+
+.tab-indicator {
+  position: absolute;
+  bottom: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  border-radius: 2px 2px 0 0;
+  transition: transform 0.3s var(--ease), width 0.3s var(--ease);
+  pointer-events: none;
+}
+
+/* =========================
+   Main / List
+   ========================= */
+.app-main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 16px 16px calc(40px + env(safe-area-inset-bottom));
+}
+
+.list-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px 14px;
+  font-size: 12.5px;
+  color: var(--text-dim);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+.meta-dot { color: var(--text-muted); }
+
+/* =========================
+   Toolbar (search + filters)
+   ========================= */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0 4px;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+
+.search-wrap {
+  position: relative;
+  flex: 1 1 240px;
+  min-width: 200px;
+  display: flex;
+  align-items: center;
+}
+.search-icon {
+  position: absolute;
+  left: 13px;
+  font-size: 13px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+.search-input {
+  width: 100%;
+  height: 40px;
+  padding: 0 38px 0 36px;
+  border-radius: 11px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  outline: none;
+  transition: border-color 0.18s var(--ease), background 0.18s var(--ease), box-shadow 0.18s var(--ease);
+  -webkit-appearance: none;
+  appearance: none;
+}
+.search-input::placeholder { color: var(--text-muted); }
+.search-input:focus {
+  border-color: var(--accent);
+  background: var(--bg-elev-2);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+/* Hide native search clear UI; we provide our own button */
+.search-input::-webkit-search-cancel-button { -webkit-appearance: none; }
+
+.search-clear {
+  position: absolute;
+  right: 6px;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  color: var(--text-dim);
+  font-size: 13px;
+  transition: all 0.15s var(--ease);
+}
+.search-clear:hover { background: var(--bg-elev-2); color: var(--text); }
+.search-clear[hidden] { display: none; }
+
+.filter-toggles {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 11px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  transition: all 0.18s var(--ease);
+  -webkit-tap-highlight-color: transparent;
+}
+.filter-chip:hover { background: var(--bg-elev-2); border-color: var(--border-strong); color: var(--text); }
+.filter-chip i { font-size: 12.5px; }
+/* Hide the actual checkbox; the chip itself is the toggle */
+.filter-chip input { position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none; }
+
+/* Active (checked) state */
+.filter-chip:has(#filter-watchlist:checked) {
+  background: rgba(255, 204, 77, 0.12);
+  border-color: rgba(255, 204, 77, 0.45);
+  color: var(--star);
+}
+.filter-chip:has(#filter-hide-picked:checked) {
+  background: rgba(255, 91, 60, 0.12);
+  border-color: rgba(255, 91, 60, 0.45);
+  color: var(--accent);
+}
+/* Keyboard focus ring on the chip */
+.filter-chip:focus-within {
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.rankings-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  /* Don't let row insert/remove shift the user's scroll position mid-drag */
+  overflow-anchor: none;
+}
+
+/* =========================
+   Player Row
+   ========================= */
+.player-row {
+  display: grid;
+  grid-template-columns: 28px 34px 34px 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px 10px 6px;
+  min-height: var(--row-h);
+  background: var(--bg-row);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  /* Vertical panning only — stops the browser doing horizontal-gesture
+     hit-testing on every touch over a row */
+  touch-action: pan-y;
+  /* Perf: isolate each row's layout/paint so reordering one row doesn't
+     force the browser to recalc every other row */
+  contain: layout style paint;
+  /* Perf: skip rendering work for rows far off-screen (87+ row lists).
+     Rows are uniform height, so the intrinsic placeholder size is exact
+     and scrolling stays pixel-stable. */
+  content-visibility: auto;
+  contain-intrinsic-size: auto var(--row-h);
+}
+
+/* Hover styles only on devices that actually hover — prevents sticky
+   "phantom hover" repaints after taps on touch screens */
+@media (hover: hover) {
+  .player-row:hover {
+    background: var(--bg-row-hover);
+    border-color: var(--border-strong);
+  }
+}
+
+.player-row.picked {
+  opacity: 0.42;
+}
+.player-row.picked .player-name {
+  text-decoration: line-through;
+  text-decoration-color: var(--text-muted);
+}
+
+/* "Picked By Me" — off-board like .picked (dimmed + struck through) but with
+   an azure tint + left accent stripe so your own picks pop in a long draft.
+   A player is either picked OR mine, never both (enforced in JS), so these
+   two rules don't compete. */
+.player-row.mine {
+  opacity: 0.42;
+  background: var(--mine-soft);
+  border-color: rgba(79, 158, 255, 0.30);
+  box-shadow: inset 3px 0 0 var(--mine);
+}
+.player-row.mine .player-name {
+  text-decoration: line-through;
+  text-decoration-color: var(--mine);
+}
+@media (hover: hover) {
+  .player-row.mine:hover {
+    background: rgba(79, 158, 255, 0.14);
+  }
+}
+
+.player-row.favorited {
+  border-color: rgba(255, 204, 77, 0.25);
+  background: linear-gradient(90deg, rgba(255,204,77,0.04), var(--bg-row) 30%);
+}
+@media (hover: hover) {
+  .player-row.favorited:hover {
+    background: linear-gradient(90deg, rgba(255,204,77,0.07), var(--bg-row-hover) 30%);
+  }
+}
+
+/* Sortable ghost / drag states */
+.sortable-ghost {
+  opacity: 0.35;
+  background: var(--bg-elev-2) !important;
+  border: 1px dashed var(--border-strong) !important;
+}
+
+.sortable-chosen {
+  cursor: grabbing !important;
+}
+
+.sortable-drag {
+  opacity: 1 !important;
+  background: var(--bg-elev-2) !important;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.6) !important;
+  border-color: var(--accent) !important;
+
+  /* CRITICAL FIX: Kill all transitions so it sticks instantly to the finger */
+  transition: none !important;
+
+  /* Ensure hardware acceleration — the clone moves on its own GPU layer */
+  will-change: transform;
+  transform: translateZ(0);
+
+  /* The clone must always paint fully (it lives on <body>) */
+  content-visibility: visible !important;
+  contain: none !important;
+
+  /* Prevent browser from capturing touch events */
+  touch-action: none !important;
+  z-index: 9999 !important;
+}
+
+/* ---- Drag perf mode (body.is-dragging is set by JS for the drag's duration) ---- */
+/* Rows must paint normally while Sortable measures + animates them… */
+
+/* …and the expensive sticky-header backdrop blur is paused so auto-scroll
+   during a drag doesn't trigger costly re-blurs every frame on phones. */
+body.is-dragging .app-header {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  background: var(--bg);
+}
+/* Pause icon-button transitions mid-drag (they'd otherwise animate as the
+   pointer passes over rows). */
+body.is-dragging .icon-btn,
+body.is-dragging .player-row {
+  transition: none !important;
+}
+
+/* Drag handle */
+.drag-handle {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 100%;
+  min-height: 44px;
+  color: var(--text-muted);
+  cursor: grab;
+  font-size: 14px;
+  transition: color 0.15s var(--ease);
+  touch-action: none;
+  border-radius: 6px;
+}
+@media (hover: hover) {
+  .drag-handle:hover { color: var(--text); }
+}
+.drag-handle:active { cursor: grabbing; }
+
+/* Rank number */
+.rank {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Team logo (before the player name) */
+.team-logo {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 0px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+.team-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+/* vs. ECR comparison column */
+.player-compare {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+.compare-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 52px;
+  padding: 4px 6px;
+  border-radius: 9px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  line-height: 1;
+}
+.compare-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.compare-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-dim);
+}
+.compare-cell.delta-up .compare-value { color: var(--success); }
+.compare-cell.delta-up { border-color: rgba(34, 197, 94, 0.35); background: rgba(34, 197, 94, 0.08); }
+.compare-cell.delta-down .compare-value { color: var(--danger); }
+.compare-cell.delta-down { border-color: rgba(239, 68, 68, 0.35); background: rgba(239, 68, 68, 0.08); }
+.compare-cell.delta-even .compare-value { color: var(--text-dim); }
+.compare-cell.delta-neutral .compare-value { color: var(--text-muted); }
+
+/* Player info */
+.player-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.player-name {
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.01em;
+}
+.player-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-dim);
+  font-weight: 500;
+}
+.player-team {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.04em;
+  font-size: 11.5px;
+}
+.player-bye {
+  color: var(--text-muted);
+  font-size: 11.5px;
+}
+.player-bye::before {
+  content: 'BYE ';
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* Position chip */
+.pos-chip {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 5px;
+  letter-spacing: 0.05em;
+  
+  /* Neutral dark styling to let the logos shine */
+  background: var(--bg-elev-2);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+}
+
+/* Actions */
+.player-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.icon-btn {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  color: var(--text-muted);
+  transition: all 0.15s var(--ease);
+  font-size: 15px;
+}
+@media (hover: hover) {
+  .icon-btn:hover { background: var(--bg-elev-2); color: var(--text); }
+}
+.icon-btn:active { transform: scale(0.92); }
+
+.icon-btn.star.active {
+  color: var(--star);
+  background: rgba(255, 204, 77, 0.1);
+}
+.icon-btn.pick.active {
+  color: var(--success);
+  background: rgba(34, 197, 94, 0.12);
+}
+/* "Draft to my team" button — azure to match the .mine row treatment. */
+.icon-btn.mine-btn.active {
+  color: var(--mine);
+  background: var(--mine-soft);
+}
+
+/* =========================
+   Tier Break Row
+   ========================= */
+.tier-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  margin: 8px 0 2px;
+  background: linear-gradient(90deg, rgba(255, 91, 60, 0.12), rgba(255, 91, 60, 0.02));
+  border: 1px solid rgba(255, 91, 60, 0.25);
+  border-radius: var(--radius-sm);
+  min-height: 44px;
+  touch-action: pan-y;
+  -webkit-tap-highlight-color: transparent;
+}
+.tier-row .drag-handle { color: var(--accent); }
+.tier-label {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 4px 0;
+  font-family: inherit;
+}
+.tier-label:focus {
+  background: rgba(0,0,0,0.25);
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+.tier-row .icon-btn { color: var(--accent); }
+.tier-row .icon-btn:hover { background: rgba(255, 91, 60, 0.15); color: var(--accent); }
+
+/* =========================
+   My Team — header badge + meta
+   ========================= */
+/* Header button stays a quiet ghost button; the badge is the live signal. */
+.my-team-btn { position: relative; }
+.my-team-badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  margin-left: 2px;
+  border-radius: 999px;
+  background: var(--mine);
+  color: #061325;
+  font-size: 11px;
+  font-weight: 800;
+  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.my-team-btn[aria-expanded="true"] {
+  color: var(--mine);
+  border-color: rgba(79, 158, 255, 0.45);
+  background: var(--mine-soft);
+}
+
+/* Meta line entry for My Team count (only shows when non-zero). */
+.meta-myteam { color: var(--mine); font-weight: 600; }
+
+/* =========================
+   My Team — drawer
+   ========================= */
+.team-drawer {
+  position: fixed;
+  inset: 0;
+  z-index: 90;              /* below modal (100) & toast (200), above header */
+}
+.team-drawer[hidden] { display: none; }
+
+.team-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  opacity: 0;
+  transition: opacity 0.28s var(--ease);
+}
+.team-drawer.open .team-backdrop { opacity: 1; }
+
+.team-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: 400px;
+  max-width: 92vw;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-elev);
+  border-left: 1px solid var(--border);
+  box-shadow: -20px 0 50px rgba(0,0,0,0.5);
+  /* Slide-in: starts off-screen to the right, eased into place. */
+  transform: translateX(100%);
+  transition: transform 0.3s var(--ease);
+  /* Respect the device notch / status bar on mobile. */
+  padding-top: env(safe-area-inset-top);
+}
+.team-drawer.open .team-panel { transform: translateX(0); }
+
+.team-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--border);
+  flex: 0 0 auto;
+}
+.team-title-wrap { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.team-title-icon {
+  width: 38px; height: 38px;
+  border-radius: 11px;
+  display: grid; place-items: center;
+  background: var(--mine-soft);
+  border: 1px solid rgba(79, 158, 255, 0.35);
+  color: var(--mine);
+  font-size: 16px;
+  flex: 0 0 auto;
+}
+.team-header h2 { font-size: 17px; letter-spacing: -0.01em; line-height: 1.1; }
+.team-summary {
+  display: block;
+  font-size: 11.5px;
+  color: var(--text-dim);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  margin-top: 2px;
+}
+.team-close { width: 38px; height: 38px; font-size: 17px; flex: 0 0 auto; }
+
+.team-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 12px 16px calc(24px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Position group */
+.team-group { display: flex; flex-direction: column; gap: 6px; }
+.team-group-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 4px 8px;
+}
+.team-group-pos {
+  /* reuses .pos-chip; color it with the position palette */
+  background: var(--bg-elev-2);
+}
+.team-group-pos.QB  { color: var(--qb);  border-color: rgba(239,68,68,0.4); }
+.team-group-pos.RB  { color: var(--rb);  border-color: rgba(34,197,94,0.4); }
+.team-group-pos.WR  { color: var(--wr);  border-color: rgba(59,130,246,0.4); }
+.team-group-pos.TE  { color: var(--te);  border-color: rgba(245,158,11,0.4); }
+.team-group-pos.K   { color: var(--k);   border-color: rgba(139,92,246,0.4); }
+.team-group-pos.DST { color: var(--dst); border-color: rgba(20,184,166,0.4); }
+.team-group-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.team-group-count {
+  margin-left: auto;
+  min-width: 22px;
+  text-align: center;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--bg-elev-2);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Roster row */
+.team-row {
+  display: grid;
+  grid-template-columns: 28px 34px minmax(0, 1fr) 36px;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  background: var(--bg-row);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--mine);
+  animation: fade-in 0.18s var(--ease);
+}
+.team-row-rank {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.team-row-logo {
+  width: 34px; height: 34px;
+  display: grid; place-items: center;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.team-row-logo img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.team-row-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.team-row-name {
+  font-weight: 600;
+  font-size: 14.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.01em;
+}
+.team-row-meta { display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--text-dim); }
+.team-row-remove { width: 36px; height: 36px; font-size: 14px; color: var(--text-muted); }
+.team-row-remove:hover { color: var(--danger); background: rgba(239, 68, 68, 0.1); }
+
+/* Empty roster */
+.team-empty {
+  margin: 40px 20px;
+  text-align: center;
+  color: var(--text-dim);
+}
+.team-empty i { font-size: 34px; margin-bottom: 12px; color: var(--mine); opacity: 0.7; }
+.team-empty p { font-size: 15px; font-weight: 600; margin: 0 0 6px; color: var(--text); }
+.team-empty span { font-size: 12.5px; color: var(--text-dim); }
+.team-empty span i { font-size: 11px; color: var(--mine); margin: 0 2px; }
+
+/* =========================
+   Modal
+   ========================= */
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+.modal[hidden] { display: none; }
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: fade-in 0.2s var(--ease);
+}
+.modal-card {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 22px;
+  box-shadow: var(--shadow);
+  animation: pop-in 0.22s var(--ease);
+}
+.modal-card h2 { font-size: 18px; margin-bottom: 8px; }
+.modal-card p { color: var(--text-dim); font-size: 14px; margin: 0 0 18px; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
+
+/* =========================
+   Toast
+   ========================= */
+.toast {
+  position: fixed;
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--bg-elev-2);
+  color: var(--text);
+  padding: 12px 18px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: var(--shadow);
+  opacity: 0;
+  transition: all 0.25s var(--ease);
+  z-index: 200;
+  pointer-events: none;
+  max-width: 90vw;
+}
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* =========================
+   Empty state
+   ========================= */
+.empty-state {
+  padding: 60px 20px;
+  text-align: center;
+  color: var(--text-dim);
+}
+.empty-state i { font-size: 38px; margin-bottom: 10px; color: var(--text-muted); }
+.empty-state p { font-size: 14px; margin: 0; }
+
+/* =========================
+   Animations
+   ========================= */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes pop-in {
+  from { opacity: 0; transform: scale(0.95) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* =========================
+   Responsive
+   ========================= */
+@media (max-width: 640px) {
+  body { font-size: 14.5px; }
+  .header-inner { padding: 12px 14px; }
+  .brand-text h1 { font-size: 16px; }
+  .brand-sub { font-size: 10px; }
+  .btn-label { display: none; }
+  .btn { padding: 0 12px; height: 36px; }
+  .tabs { padding: 0 8px; }
+  .tab { padding: 12px 14px; font-size: 13.5px; }
+
+  /* Lighter header blur on phones — large backdrop-filters are one of the
+     costliest paints on mobile GPUs and re-run on every scrolled frame. */
+  .app-header {
+    background: rgba(10,10,12,0.94);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  .app-main { padding: 12px 10px 60px; }
+
+  .toolbar { gap: 8px; }
+  .search-wrap { flex: 1 1 100%; min-width: 100%; }
+  .filter-toggles { flex: 1 1 100%; }
+  .filter-chip { flex: 1 1 0; justify-content: center; height: 38px; padding: 0 10px; }
+
+  /* ----- Two-line row layout -----
+     On phones there isn't enough width for name + team + bye + two compare
+     cells + three action buttons on a single line. Instead of shrinking
+     everything into an unreadable jumble, the row becomes a 2-line card:
+
+       [handle] [rank] [logo] [ name / team / bye ] [★]
+       [handle] [rank] [logo] [ vs.ECR             ] [👤]
+                                      [✓] spans both lines
+
+     Handle / rank / logo / actions span both lines; the compare cells get
+     the full width of the info column so every stat stays visible. */
+  .player-row {
+    grid-template-areas:
+      "handle rank logo info    actions"
+      "handle rank logo compare actions";
+    grid-template-columns: 26px 26px 32px minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
+    gap: 4px 8px;
+    padding: 8px 8px 8px 2px;
+    min-height: var(--row-h-mobile);
+    border-radius: 12px;
+    /* Three stacked action buttons now live in the actions column, so the
+       row is taller than the old two-button version. Keep the intrinsic
+       placeholder accurate so virtualized scrolling stays pixel-stable. */
+    contain-intrinsic-size: auto 116px;
+  }
+  .drag-handle    { grid-area: handle; width: 26px; min-height: 100%; }
+  .rank           { grid-area: rank; font-size: 13px; }
+  .team-logo      { grid-area: logo; width: 32px; height: 32px; border-radius: 8px; align-self: center; }
+  .player-info    { grid-area: info; align-self: end; }
+  .player-compare { grid-area: compare; align-self: start; }
+  .player-actions {
+    grid-area: actions;
+    flex-direction: column; /* stack ★ / 👤 / ✓ — frees width for the name */
+    gap: 2px;
+  }
+
+  .player-name { font-size: 15px; }
+  .player-meta { font-size: 11.5px; gap: 6px; }
+  /* Slightly shorter stacked buttons so three fit without bloating the row. */
+  .icon-btn { width: 40px; height: 34px; font-size: 15px; }
+
+  /* Compare cells stretch across the freed-up line: roomier + readable */
+  .player-compare { gap: 6px; }
+  .compare-cell {
+    flex: 1 1 0;
+    flex-direction: row;
+    justify-content: space-between;
+    min-width: 0;
+    padding: 4px 8px;
+    gap: 6px;
+  }
+  .compare-label { font-size: 9px; }
+  .compare-value { font-size: 13px; }
+
+  /* Drawer is a near full-screen sheet on phones. */
+  .team-panel { width: 100%; max-width: 100%; }
+  .team-row { grid-template-columns: 24px 32px minmax(0, 1fr) 34px; gap: 9px; }
+  .team-row-logo { width: 32px; height: 32px; }
+}
+
+/* When the drawer is open, lock the background so the page doesn't scroll
+   behind the sheet. Only at/below desktop widths (where the backdrop covers
+   the viewport) — avoids a desktop scrollbar gutter shift. */
+@media (max-width: 640px) {
+  body.team-open { overflow: hidden; }
+}
+
+@media (max-width: 380px) {
+  .player-row {
+    grid-template-columns: 24px 22px 28px minmax(0, 1fr) auto;
+    gap: 4px 6px;
+  }
+  .team-logo { width: 28px; height: 28px; }
+  .pos-chip { font-size: 10px; padding: 2px 5px; }
+  .player-meta { gap: 5px; font-size: 11px; }
+  .compare-cell { padding: 3px 6px; }
+  .compare-label { font-size: 8.5px; }
+  .compare-value { font-size: 12px; }
+  .icon-btn { width: 38px; }
+}
+
+/* Reduce motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
