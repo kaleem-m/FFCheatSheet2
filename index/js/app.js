@@ -60,6 +60,11 @@
     return LOGO_DIR + code + ext;
   }
 
+  // ---------- Sleeper live data ----------
+  // Loaded asynchronously after boot via SleeperData.init().
+  // Re-render is triggered whenever the status changes.
+  // Access per player: SleeperData.getPlayer(localPlayerId)
+
   // ---------- State ----------
   // NOTE: `order` is now a master list of PLAYERS ONLY (keys like "p:p1").
   // This keeps player rankings dynamically linked across all tabs.
@@ -93,6 +98,7 @@
 
   let defaultPlayers = [];
   let sortable = null;
+  let _sleeperStatusEl = null; // filled in by bindEvents
 
   // ---------- DOM ----------
   const $list = document.getElementById('rankings-list');
@@ -293,6 +299,53 @@
     render();
     updateMyTeamBadge();
     initSortable(); // created ONCE — render() only toggles enabled/disabled
+
+    // Sleeper live data — load from cache first (instant), then re-fetch if
+    // stale. Fires a re-render whenever new data arrives so injury badges and
+    // depth-chart chips appear without a full page reload.
+    if (typeof SleeperData !== 'undefined') {
+      SleeperData.on(sleeperStatusChanged);
+      SleeperData.init().catch(() => {});
+    }
+  }
+
+  // Called whenever the Sleeper fetch status changes (cached → ok | error).
+  // Invalidates the row prototype so badges built on stale data get rebuilt,
+  // then triggers a full render so every visible row reflects the new data.
+  function sleeperStatusChanged(status) {
+    updateSleeperStatusUI(status);
+    if (status === 'ok' || status === 'cached') {
+      // Sleeper data changed — any cached player rows are now stale.
+      // We must clear and rebuild them so injury/DC badges are correct.
+      clearRowCache();
+      render();
+    }
+  }
+
+  function updateSleeperStatusUI(status) {
+    // Update the menu item label to reflect freshness.
+    const el = document.getElementById('sleeper-status-item');
+    if (!el) return;
+    const lu = SleeperData.getLastUpdated();
+    const timeStr = lu ? _fmtAge(lu) : null;
+    if (status === 'loading') {
+      el.innerHTML = '<i class="fa-solid fa-rotate fa-spin"></i> Updating player data…';
+    } else if (status === 'ok') {
+      el.innerHTML = `<i class="fa-solid fa-circle-check"></i> Player data updated${timeStr ? ' · ' + timeStr + ' ago' : ''}`;
+    } else if (status === 'cached') {
+      el.innerHTML = `<i class="fa-solid fa-database"></i> Player data${timeStr ? ' · ' + timeStr + ' ago' : ''}`;
+    } else if (status === 'error') {
+      el.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Player data unavailable';
+    }
+  }
+
+  function _fmtAge(date) {
+    const mins = Math.floor((Date.now() - date.getTime()) / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins}m`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h`;
+    return `${Math.floor(hrs / 24)}d`;
   }
 
   // ---------- Helpers ----------
@@ -663,7 +716,9 @@
           <span class="pos-chip" hidden></span>
           <span class="player-team"></span>
           <span class="player-bye" hidden></span>
+          <span class="dc-badge" hidden></span>
         </div>
+        <div class="sleeper-badges" hidden></div>
       </div>
       <div class="player-compare" aria-label="Ranking vs. ECR">
         <div class="compare-cell" data-field="ecr">
@@ -757,6 +812,9 @@
     // vs. ECR compare cell.
     applyDeltaCell(li.querySelector('.compare-cell[data-field="ecr"]'), cmp ? cmp.ecr : null);
 
+    // Sleeper live data — depth chart badge + injury badge.
+    applySleeperBadges(li, p.id);
+
     // Action buttons — favorite.
     const favBtn = li.querySelector('[data-action="favorite"]');
     favBtn.classList.toggle('active', isFav);
@@ -773,6 +831,71 @@
     pickIcon.style.opacity = isPicked ? '' : '0.55';
 
     return li;
+  }
+
+  // ---------- Sleeper badge helpers ----------
+
+  // Depth-chart label: 'STARTER' for dc=1, 'BACKUP' for dc=2, 'QB3' etc. for
+  // deeper entries. Returns null when no dc data is available.
+  function dcLabel(dc) {
+    if (dc == null) return null;
+    if (dc === 1) return 'STARTER';
+    if (dc === 2) return 'BACKUP';
+    return `DEPTH ${dc}`;
+  }
+
+  // Injury status → severity class for colour coding.
+  function injClass(status) {
+    if (!status) return '';
+    const s = status.toLowerCase();
+    if (s === 'out' || s === 'ir' || s === 'injured reserve') return 'inj-out';
+    if (s === 'dnr') return 'inj-dnr';
+    return 'inj-q';  // Questionable (most common)
+  }
+
+  // Update depth-chart chip and injury badge on an existing row node.
+  // Called on every updatePlayerRow so any newly-fetched Sleeper data appears
+  // instantly without a full row rebuild.
+  function applySleeperBadges(li, playerId) {
+    const sd = (typeof SleeperData !== 'undefined')
+      ? SleeperData.getPlayer(playerId)
+      : {};
+
+    // --- Depth-chart chip (inline in player-meta) ---
+    const dcEl = li.querySelector('.dc-badge');
+    if (dcEl) {
+      const label = dcLabel(sd.dc);
+      if (label) {
+        dcEl.textContent = label;
+        dcEl.hidden = false;
+        dcEl.className = 'dc-badge dc-' + (sd.dc === 1 ? 'starter' : sd.dc === 2 ? 'backup' : 'depth');
+      } else {
+        dcEl.hidden = true;
+      }
+    }
+
+    // --- Injury / status banner ---
+    const badgesEl = li.querySelector('.sleeper-badges');
+    if (!badgesEl) return;
+
+    const injStatus = sd.inj || sd.status;  // status catches IR/PUP when no explicit injury_status
+    if (!injStatus) {
+      badgesEl.hidden = true;
+      badgesEl.textContent = '';
+      return;
+    }
+
+    // Build badge text: status + optional body part
+    let badgeText = injStatus;
+    if (sd.inj_part) badgeText += ': ' + sd.inj_part;
+    if (sd.inj_note) badgeText += ' (' + sd.inj_note + ')';
+
+    badgesEl.hidden = false;
+    badgesEl.innerHTML =
+      `<span class="inj-badge ${injClass(injStatus)}">`+
+      `<i class="fa-solid fa-circle-exclamation"></i> `+
+      escapeHtml(badgeText)+
+      `</span>`;
   }
 
   // Maps a vs. ECR `diff` (referenceRank - myRank) to its display class + text:
@@ -1861,6 +1984,12 @@ function updateRankNumbers() {
       else if (action === 'restore') promptRestore();
       else if (action === 'export-csv') exportCSV();
       else if (action === 'export-pdf') exportPDF();
+      else if (action === 'refresh-sleeper') {
+        if (typeof SleeperData !== 'undefined') {
+          updateSleeperStatusUI('loading');
+          SleeperData.refresh().catch(() => {});
+        }
+      }
       else if (action === 'reset') {
         openModal({
           title: 'Reset rankings?',
