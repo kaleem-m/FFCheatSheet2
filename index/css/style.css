@@ -638,6 +638,100 @@ body.is-dragging .player-row {
   font-weight: 500;
 }
 
+/* =========================
+   Sleeper live data — Depth chart badge + Injury badge
+   ========================= */
+
+/* Depth-chart chip (inline, after the bye week in player-meta) */
+.dc-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9.5px;
+  font-weight: 800;
+  padding: 2px 5px;
+  border-radius: 4px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.dc-badge.dc-starter {
+  color: #22c55e;
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.35);
+}
+.dc-badge.dc-backup {
+  color: var(--text-dim);
+  background: var(--bg-elev-2);
+  border: 1px solid var(--border);
+}
+.dc-badge.dc-depth {
+  color: var(--text-muted);
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+}
+
+/* Injury banner — sits below player-meta on its own line */
+.sleeper-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 1px;
+}
+.inj-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 230px;
+  letter-spacing: 0.01em;
+}
+.inj-badge i {
+  font-size: 9px;
+  flex: 0 0 auto;
+}
+/* Questionable */
+.inj-badge.inj-q {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+/* Out / IR */
+.inj-badge.inj-out {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+/* DNR */
+.inj-badge.inj-dnr {
+  color: #a855f7;
+  background: rgba(168, 85, 247, 0.1);
+  border: 1px solid rgba(168, 85, 247, 0.35);
+}
+
+/* Sleeper status menu item — subtler text, no hover background when just informational */
+.sleeper-status-btn {
+  cursor: pointer;
+}
+.sleeper-status-btn i {
+  color: var(--text-dim) !important;
+  width: 18px;
+  text-align: center;
+}
+.sleeper-status-btn .fa-circle-check { color: #22c55e !important; }
+.sleeper-status-btn .fa-triangle-exclamation { color: #f59e0b !important; }
+.sleeper-status-btn .fa-database { color: var(--text-muted) !important; }
+
+/* Row height: when an injury badge is showing, the row grows a tiny bit.
+   Clamp the intrinsic size hint so content-visibility doesn't clip it. */
+.player-row:has(.sleeper-badges:not([hidden])) {
+  contain-intrinsic-size: auto 84px;
+}
+
 /* Position chip */
 .pos-chip {
   font-family: 'JetBrains Mono', monospace;
@@ -1086,6 +1180,10 @@ body.is-dragging .player-row {
   .player-meta { font-size: 11.5px; gap: 6px; }
   /* Slightly shorter stacked buttons so three fit without bloating the row. */
   .icon-btn { width: 40px; height: 34px; font-size: 15px; }
+
+  /* Sleeper badges on mobile — slightly smaller text */
+  .dc-badge { font-size: 9px; }
+  .inj-badge { font-size: 10px; max-width: 160px; }
 
   /* Compare cells stretch across the freed-up line: roomier + readable */
   .player-compare { gap: 6px; }

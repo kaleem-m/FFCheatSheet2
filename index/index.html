@@ -67,6 +67,10 @@
               <i class="fa-solid fa-file-pdf"></i> Export PDF
             </button>
             <div class="menu-sep"></div>
+            <button class="menu-item sleeper-status-btn" data-action="refresh-sleeper" role="menuitem" id="sleeper-status-item">
+              <i class="fa-solid fa-rotate"></i> Refresh player data
+            </button>
+            <div class="menu-sep"></div>
             <button class="menu-item danger" data-action="reset" role="menuitem">
               <i class="fa-solid fa-rotate-left"></i> Reset Rankings
             </button>
@@ -181,6 +185,7 @@
   <input id="restore-input" class="visually-hidden" type="file"
          accept="application/json,.json" aria-hidden="true" tabindex="-1" />
 
+  <script src="js/sleeper.js" defer></script>
   <script src="js/app.js" defer></script>
 </body>
 </html>
