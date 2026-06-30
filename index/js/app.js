@@ -14,6 +14,45 @@
   const STORAGE_KEY = 'draftboard.v1';
   const POSITIONS = ['ALL', 'QB', 'RB', 'WR', 'TE', 'K', 'DST'];
 
+  // ---------- Sleeper injury data ----------
+  // This is a client-side PWA: every user fetches injury data from their OWN
+  // browser/IP straight from Sleeper's public API, then caches it in
+  // localStorage (fetch-on-demand, cache-locally). We never hit a backend.
+  //
+  // Sleeper exposes the full NFL player blob at one endpoint (~15 MB). There is
+  // no per-player public endpoint, so we fetch it once, then immediately throw
+  // away everything except the handful of players in our players.json (mapped
+  // to Sleeper IDs in data/sleeper-map.json). Only the tiny filtered result is
+  // ever stored. Sleeper asks callers not to poll this endpoint more than once
+  // per day — which suits us fine, injury designations move on a daily cadence.
+  const SLEEPER_PLAYERS_URL = 'https://api.sleeper.app/v1/players/nfl';
+  const INJURY_STORAGE_KEY = 'draftboard.injuries.v1';
+  // Consider cached data "fresh" for 12h; older than that we auto-refresh on
+  // load (silently, in the background) so a returning user sees current info.
+  const INJURY_FRESH_MS = 12 * 60 * 60 * 1000;
+
+  // Maps each raw Sleeper injury_status code to how we present it: a severity
+  // bucket (drives icon + colour), a short chip label, and a human title. Codes
+  // observed in the wild: Questionable, Doubtful, Out, IR, PUP, Sus, COV, DNR,
+  // NA. Anything unrecognised falls back to a generic "note" treatment so a new
+  // Sleeper code never silently disappears from the UI.
+  const INJURY_INFO = {
+    Questionable: { sev: 'warn', short: 'Q',   label: 'Questionable' },
+    Doubtful:     { sev: 'bad',  short: 'D',   label: 'Doubtful' },
+    Out:          { sev: 'out',  short: 'OUT', label: 'Out' },
+    IR:           { sev: 'out',  short: 'IR',  label: 'Injured Reserve' },
+    PUP:          { sev: 'out',  short: 'PUP', label: 'Physically Unable to Perform' },
+    NFI:          { sev: 'out',  short: 'NFI', label: 'Non-Football Injury' },
+    Sus:          { sev: 'out',  short: 'SUS', label: 'Suspended' },
+    DNR:          { sev: 'warn', short: 'DNR', label: 'Did Not Report' },
+    COV:          { sev: 'warn', short: 'COV', label: 'COVID-19' },
+    NA:           { sev: 'warn', short: 'NA',  label: 'Inactive / Not Active' },
+  };
+  function injuryInfo(code) {
+    if (!code) return null;
+    return INJURY_INFO[code] || { sev: 'warn', short: '!', label: String(code) };
+  }
+
   // ---------- Team Logos ----------
   // Logos are looked up purely by a player's `team` abbreviation, so every
   // team's logo can be swapped in later just by dropping a file here. To add a
@@ -82,6 +121,13 @@
     tiers: {},            // { tierId: { id, label, tab, anchor } }
     activeTab: 'ALL',
     meta: {},             // { playerId: { ecr: Number } }  (ECR reference rankings)
+
+    // Live injury data fetched from Sleeper, keyed by OUR player id (e.g. "p1").
+    // Shape per entry: { status, label, sev, short, bodyPart, notes, team }.
+    // Empty until the user (or the auto-load) pulls from Sleeper.
+    injuries: {},
+    sleeperMap: {},       // { ourId: sleeperId }  (data/sleeper-map.json)
+    injuriesFetchedAt: 0, // epoch ms of the last successful Sleeper fetch
   };
 
   // Transient UI filters (not persisted)
@@ -105,6 +151,8 @@
   const $menuBtn = document.getElementById('menu-btn');
   const $menuDropdown = document.getElementById('menu-dropdown');
   const $addTierBtn = document.getElementById('add-tier-btn');
+  const $injuryBtn = document.getElementById('injury-btn');
+  const $injuryPop = document.getElementById('injury-pop');
   const $search = document.getElementById('search-input');
   const $searchClear = document.getElementById('search-clear');
   const $filterWatchlist = document.getElementById('filter-watchlist');
@@ -263,9 +311,10 @@
     // Fetch both data files in parallel (was sequential) for a faster boot.
     // rankings-meta.json holds the ECR reference values for the
     // "vs. ECR" column — missing players just show "–".
-    const [playersRes, metaRes] = await Promise.allSettled([
+    const [playersRes, metaRes, mapRes] = await Promise.allSettled([
       fetch('data/players.json').then(r => r.json()),
       fetch('data/rankings-meta.json').then(r => r.json()),
+      fetch('data/sleeper-map.json').then(r => r.json()),
     ]);
     if (playersRes.status === 'fulfilled') {
       defaultPlayers = playersRes.value;
@@ -279,6 +328,15 @@
       console.warn('Failed to load rankings-meta.json', metaRes.reason);
       state.meta = {};
     }
+    // The our-id -> Sleeper-id map lets us request injury data for ONLY the
+    // players in our list (we still fetch the full Sleeper blob, but discard
+    // everything not in this map).
+    if (mapRes.status === 'fulfilled') {
+      state.sleeperMap = mapRes.value || {};
+    } else {
+      console.warn('Failed to load sleeper-map.json', mapRes.reason);
+      state.sleeperMap = {};
+    }
     // ECR data changed — invalidate the comparisons memo.
     bumpMetaVersion();
 
@@ -288,11 +346,25 @@
     const saved = load();
     applySavedState(saved);
 
+    // Hydrate injuries from the local cache (instant, no network) so a returning
+    // user sees the last-known statuses immediately on load.
+    applyInjuryCache(loadInjuryCache());
+
     bindEvents();
     setActiveTab(state.activeTab, false);
     render();
     updateMyTeamBadge();
+    updateInjuryBtnTitle();
     initSortable(); // created ONCE — render() only toggles enabled/disabled
+
+    // Fetch-on-load: if we have no cached injury data, or it's older than the
+    // freshness window, refresh quietly in the background from the user's own
+    // browser/IP. A manual tap of the Injuries button always refetches.
+    if (Object.keys(state.sleeperMap).length) {
+      const stale = !state.injuriesFetchedAt ||
+        (Date.now() - state.injuriesFetchedAt) > INJURY_FRESH_MS;
+      if (stale) refreshInjuries({ silent: true });
+    }
   }
 
   // ---------- Helpers ----------
@@ -464,6 +536,224 @@
       $toast.classList.remove('show');
       setTimeout(() => { $toast.hidden = true; }, 250);
     }, ms);
+  }
+
+  // ---------- Injury data (Sleeper) ----------
+  // Read the cached injury snapshot written by a previous fetch. Returns the
+  // parsed envelope { fetchedAt, injuries } or null.
+  function loadInjuryCache() {
+    try {
+      const raw = localStorage.getItem(INJURY_STORAGE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object' || !parsed.injuries) return null;
+      return parsed;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // Persist the current injury map to its own localStorage key (kept separate
+  // from the main draftboard state so a Reset / Restore of rankings never wipes
+  // injury data, and a fresh fetch never rewrites the whole draftboard blob).
+  function saveInjuryCache() {
+    try {
+      localStorage.setItem(INJURY_STORAGE_KEY, JSON.stringify({
+        fetchedAt: state.injuriesFetchedAt,
+        injuries: state.injuries,
+      }));
+      return true;
+    } catch (e) {
+      console.warn('Failed to cache injuries', e);
+      return false;
+    }
+  }
+
+  // Apply a cached envelope onto live state (no network).
+  function applyInjuryCache(cache) {
+    if (!cache) return;
+    state.injuries = cache.injuries || {};
+    state.injuriesFetchedAt = cache.fetchedAt || 0;
+  }
+
+  // Human-readable "x minutes/hours/days ago" for the last fetch timestamp.
+  function injuryAgeText() {
+    if (!state.injuriesFetchedAt) return 'never updated';
+    const diff = Date.now() - state.injuriesFetchedAt;
+    const mins = Math.round(diff / 60000);
+    if (mins < 1) return 'updated just now';
+    if (mins < 60) return `updated ${mins}m ago`;
+    const hrs = Math.round(mins / 60);
+    if (hrs < 24) return `updated ${hrs}h ago`;
+    const days = Math.round(hrs / 24);
+    return `updated ${days}d ago`;
+  }
+
+  // True while a fetch is in flight (drives the button spinner + guards against
+  // overlapping requests).
+  let _injuriesLoading = false;
+
+  // Fetch the full Sleeper player blob, KEEP ONLY the players in our list
+  // (via state.sleeperMap), extract the injury-relevant fields, store the tiny
+  // filtered result, and re-render. Everything else from the 15 MB payload is
+  // discarded immediately and never persisted.
+  //
+  // `opts.silent` suppresses the success/empty toasts (used by the background
+  // auto-refresh on load so the user isn't interrupted).
+  async function refreshInjuries(opts = {}) {
+    const { silent = false } = opts;
+    if (_injuriesLoading) return;
+    _injuriesLoading = true;
+    setInjuryBtnLoading(true);
+
+    try {
+      const res = await fetch(SLEEPER_PLAYERS_URL, { cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const all = await res.json();
+
+      // Walk OUR players only — never iterate the whole Sleeper blob into state.
+      const next = {};
+      let injuredCount = 0;
+      Object.keys(state.players).forEach(ourId => {
+        const sleeperId = state.sleeperMap[ourId];
+        if (!sleeperId) return;
+        const sp = all[sleeperId];
+        if (!sp) return;
+
+        const code = sp.injury_status || null;
+        // Only store players that actually carry an injury designation; healthy
+        // players need no entry (keeps the cache tiny and the icon logic simple).
+        if (!code) return;
+
+        const info = injuryInfo(code);
+        next[ourId] = {
+          status: code,
+          label: info.label,
+          sev: info.sev,
+          short: info.short,
+          bodyPart: sp.injury_body_part || null,
+          notes: sp.injury_notes || null,
+          // Roster status gives extra context (e.g. "Injured Reserve").
+          rosterStatus: sp.status || null,
+        };
+        injuredCount++;
+      });
+
+      state.injuries = next;
+      state.injuriesFetchedAt = Date.now();
+      saveInjuryCache();
+      render();
+
+      if (!silent) {
+        showToast(injuredCount
+          ? `Injury report updated — ${injuredCount} flagged`
+          : 'Injury report updated — no injuries');
+      }
+      return true;
+    } catch (e) {
+      console.warn('Failed to fetch Sleeper injuries', e);
+      if (!silent) showToast('Could not reach Sleeper. Check your connection.');
+      return false;
+    } finally {
+      _injuriesLoading = false;
+      setInjuryBtnLoading(false);
+      updateInjuryBtnTitle();
+    }
+  }
+
+  // Toggle the header "Injuries" button into / out of its loading (spinner)
+  // state. Safe to call before the DOM ref exists (no-ops if missing).
+  function setInjuryBtnLoading(loading) {
+    if (!$injuryBtn) return;
+    $injuryBtn.classList.toggle('is-loading', loading);
+    $injuryBtn.disabled = loading;
+    const icon = $injuryBtn.querySelector('i');
+    if (icon) {
+      icon.className = loading
+        ? 'fa-solid fa-spinner fa-spin'
+        : 'fa-solid fa-kit-medical';
+    }
+  }
+
+  // Keep the button's tooltip showing how stale the data is.
+  function updateInjuryBtnTitle() {
+    if (!$injuryBtn) return;
+    $injuryBtn.title = 'Fetch latest injury statuses from Sleeper (' +
+      injuryAgeText() + ')';
+  }
+
+  // ---------- Injury detail popover ----------
+  let _injuryPopAnchor = null; // the badge button the popover is tied to
+
+  function openInjuryPopover(anchorBtn, playerId) {
+    const p = state.players[playerId];
+    const inj = state.injuries[playerId];
+    if (!p || !inj || !$injuryPop) return;
+
+    // If re-tapping the same open badge, treat as a toggle (close).
+    if (_injuryPopAnchor === anchorBtn && !$injuryPop.hidden) {
+      closeInjuryPopover();
+      return;
+    }
+    _injuryPopAnchor = anchorBtn;
+
+    $injuryPop.className = 'injury-pop sev-' + inj.sev;
+    $injuryPop.querySelector('.injury-pop-status').textContent = inj.label;
+    $injuryPop.querySelector('.injury-pop-name').textContent =
+      p.name + ' · ' + p.team + ' ' + p.position;
+
+    const bodyEl = $injuryPop.querySelector('.injury-pop-body');
+    if (inj.bodyPart) {
+      bodyEl.hidden = false;
+      bodyEl.textContent = 'Injury: ' + inj.bodyPart;
+    } else {
+      bodyEl.hidden = true;
+    }
+
+    const notesEl = $injuryPop.querySelector('.injury-pop-notes');
+    if (inj.notes) {
+      notesEl.hidden = false;
+      notesEl.textContent = inj.notes;
+    } else {
+      notesEl.hidden = true;
+    }
+
+    const footEl = $injuryPop.querySelector('.injury-pop-foot');
+    const extra = (inj.rosterStatus && inj.rosterStatus !== 'Active')
+      ? inj.rosterStatus + ' · ' : '';
+    footEl.textContent = extra + 'Source: Sleeper · ' + injuryAgeText();
+
+    // Show first (off-screen) so we can measure it, then position.
+    $injuryPop.hidden = false;
+    positionInjuryPopover(anchorBtn);
+  }
+
+  function positionInjuryPopover(anchorBtn) {
+    const a = anchorBtn.getBoundingClientRect();
+    const popRect = $injuryPop.getBoundingClientRect();
+    const gap = 8;
+    const margin = 8;
+    const vw = document.documentElement.clientWidth;
+    const vh = document.documentElement.clientHeight;
+
+    // Prefer below the badge; flip above if it would overflow the viewport.
+    let top = a.bottom + gap;
+    if (top + popRect.height > vh - margin) {
+      top = Math.max(margin, a.top - gap - popRect.height);
+    }
+    // Horizontally align to the badge's left edge, clamped to the viewport.
+    let left = a.left;
+    if (left + popRect.width > vw - margin) left = vw - margin - popRect.width;
+    if (left < margin) left = margin;
+
+    $injuryPop.style.top = Math.round(top) + 'px';
+    $injuryPop.style.left = Math.round(left) + 'px';
+  }
+
+  function closeInjuryPopover() {
+    if (!$injuryPop || $injuryPop.hidden) return;
+    $injuryPop.hidden = true;
+    _injuryPopAnchor = null;
   }
 
   // ---------- Render ----------
@@ -658,7 +948,14 @@
         <img alt="" loading="lazy" decoding="async" />
       </div>
       <div class="player-info">
-        <div class="player-name"></div>
+        <div class="player-name-row">
+          <span class="player-name"></span>
+          <button class="injury-badge" data-action="injury" type="button" hidden
+                  aria-label="Injury status" title="Injury status">
+            <i class="fa-solid fa-kit-medical" aria-hidden="true"></i>
+            <span class="injury-badge-text"></span>
+          </button>
+        </div>
         <div class="player-meta">
           <span class="pos-chip" hidden></span>
           <span class="player-team"></span>
@@ -752,6 +1049,21 @@
       posChip.textContent = p.position;
     } else if (!posChip.hidden) {
       posChip.hidden = true;
+    }
+
+    // Injury badge — only shown when Sleeper reports a designation for this
+    // player. The chip text is the short code (Q / OUT / IR…) and the whole
+    // badge is colour-coded by severity. Tapping it opens the detail popover.
+    const injBadge = li.querySelector('.injury-badge');
+    const inj = state.injuries[p.id];
+    if (inj) {
+      injBadge.hidden = false;
+      injBadge.className = 'injury-badge sev-' + inj.sev;
+      injBadge.querySelector('.injury-badge-text').textContent = inj.short;
+      injBadge.setAttribute('aria-label', 'Injury: ' + inj.label);
+      injBadge.title = inj.label + ' — tap for details';
+    } else if (!injBadge.hidden) {
+      injBadge.hidden = true;
     }
 
     // vs. ECR compare cell.
@@ -1742,6 +2054,8 @@ function updateRankNumbers() {
         togglePicked(row.dataset.playerId);
       } else if (action === 'mine') {
         toggleMine(row.dataset.playerId);
+      } else if (action === 'injury') {
+        openInjuryPopover(actionBtn, row.dataset.playerId);
       } else if (action === 'remove-tier') {
         removeTier(row.dataset.tierId);
       }
@@ -1760,6 +2074,29 @@ function updateRankNumbers() {
     });
 
     $addTierBtn.addEventListener('click', () => addTier(true));
+
+    // ---- Injuries: fetch button + detail popover ----
+    if ($injuryBtn) {
+      $injuryBtn.addEventListener('click', () => refreshInjuries());
+    }
+    if ($injuryPop) {
+      $injuryPop.addEventListener('click', (e) => {
+        if (e.target.closest('.injury-pop-close')) closeInjuryPopover();
+      });
+    }
+    // Dismiss the popover on outside click, Esc, scroll, or resize.
+    document.addEventListener('click', (e) => {
+      if ($injuryPop.hidden) return;
+      if ($injuryPop.contains(e.target)) return;
+      if (e.target.closest('[data-action="injury"]')) return; // handled by list click
+      closeInjuryPopover();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeInjuryPopover();
+    });
+    window.addEventListener('resize', closeInjuryPopover);
+    // Capture scroll anywhere (list scrolls on window; drawer scrolls internally).
+    window.addEventListener('scroll', closeInjuryPopover, true);
 
     // ---- Restore: hidden file picker change ----
     if ($restoreInput) {

@@ -35,6 +35,10 @@
       </div>
 
       <div class="header-actions">
+        <button id="injury-btn" class="btn btn-ghost injury-btn" title="Fetch latest injury statuses from Sleeper">
+          <i class="fa-solid fa-kit-medical"></i>
+          <span class="btn-label">Injuries</span>
+        </button>
         <button id="add-tier-btn" class="btn btn-ghost" title="Add tier break at top">
           <i class="fa-solid fa-layer-group"></i>
           <span class="btn-label">Add Tier</span>
@@ -193,6 +197,24 @@
       <i class="fa-solid fa-circle-check"></i>
       <span>Mark Picked</span>
     </button>
+  </div>
+
+  <!-- =========================
+       Injury detail popover
+       A single shared popover, positioned next to the tapped injury badge.
+       Shows the player's name, designation, body part, and Sleeper notes.
+       ========================= -->
+  <div id="injury-pop" class="injury-pop" hidden role="dialog" aria-label="Injury details">
+    <div class="injury-pop-head">
+      <span class="injury-pop-status"></span>
+      <button class="injury-pop-close" type="button" aria-label="Close">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <div class="injury-pop-name"></div>
+    <div class="injury-pop-body"></div>
+    <div class="injury-pop-notes"></div>
+    <div class="injury-pop-foot"></div>
   </div>
 
   <div id="toast" class="toast" hidden></div>
