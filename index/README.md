@@ -20,6 +20,7 @@ A premium, fast, drag-and-drop fantasy football cheatsheet for draft prep and li
 - **Backup / Restore / Save Now** — in the menu (⋮): **Save Now** force-writes the current state to `localStorage` (auto-save already runs on every change; this is for reassurance). **Backup (Download JSON)** exports your full state to a timestamped, self-contained JSON file that can be moved to another device. **Restore from Backup** uploads a previously exported file and rebuilds the app state exactly as it was — through the same load path used on a normal reload, with a confirmation step and graceful rejection of invalid files. (Accepts both the backup envelope and a raw `localStorage` snapshot.)
 - **Reset** — confirmation modal restores defaults & clears customizations.
 - **Export** — CSV (priority) and PDF, both include custom order, tiers, favorites, and picked status.
+- **Live Injury Statuses (Sleeper)** — a small colour-coded injury chip (Q / OUT / IR / PUP / SUS …) appears next to any player Sleeper currently flags. Tapping the chip opens a popover with the full designation, injury body part, and Sleeper's note (e.g. *"Knee – ACL · Surgery"*). A header **Injuries** button fetches the latest report on demand; the app also auto-refreshes quietly on load when the cache is stale (>12h). **Client-side only** — each user calls the Sleeper public API straight from their own browser/IP, and the result is filtered down to *only* the players in `players.json` (via `data/sleeper-map.json`) and cached in `localStorage`. No backend, and the 15 MB Sleeper blob is discarded immediately — only the tiny filtered injury map is stored.
 - **Premium Dark Theme** — Inter + JetBrains Mono, accent-orange highlights, blurred sticky header, animated tab indicator.
 - **Mobile-first responsive** — large touch targets (40px icon buttons, 72px row height on mobile), safe-area insets, no tap-highlight.
 - **Toasts + Confirmation Modal** for clean feedback.
@@ -33,8 +34,32 @@ css/style.css          # Premium dark theme + responsive layout
 js/app.js              # State, persistence, render, sortable, export
 data/players.json      # Editable sample player data
 data/rankings-meta.json# Editable ECR / ADP reference values (drives vs. columns)
+data/sleeper-map.json  # Maps each players.json id -> its Sleeper player id (for injury lookups)
 assets/logos/          # Team logos (drop <team>.svg here) + _placeholder.svg
 ```
+
+## 🏥 Injury Data (Sleeper API)
+
+The injury feature is **100% client-side**, matching the app's no-backend design:
+
+1. On load (or when you tap the header **Injuries** button) the app fetches the
+   Sleeper public players endpoint **from your own browser/IP**:
+   `https://api.sleeper.app/v1/players/nfl`.
+2. It immediately filters that response down to **only** the players in
+   `players.json`, using `data/sleeper-map.json` (`{ "p1": "9509", … }`) to map
+   each of our ids to its Sleeper id. Everything else from the ~15 MB payload is
+   thrown away.
+3. The tiny filtered injury map is cached in `localStorage` under
+   `draftboard.injuries.v1` (separate from rankings, so Reset/Restore never
+   touches it). Cached data is shown instantly on the next load; a background
+   refresh runs only when the cache is older than 12h.
+
+Each injury entry stores: Sleeper `injury_status`, a friendly label + severity
+bucket (warn / bad / out → amber / orange / red), the injury body part, and the
+free-text note. Healthy players store no entry, so the cache stays small.
+
+To re-point or extend the data source, edit the `refreshInjuries()` /
+`INJURY_INFO` block near the top of `js/app.js`.
 
 ## 🖼️ Team Logos
 
@@ -111,6 +136,8 @@ All user customizations persist in `localStorage` under the key `draftboard.v1`:
 | Mark picked | Check icon on each row |
 | Draft to my team | User-check icon on each row (adds to My Team drawer) |
 | View roster | "My Team" button in the header (badge shows count) |
+| Update injuries | "Injuries" button in the header (fetches latest from Sleeper) |
+| View injury details | Tap a player's injury chip (Q/OUT/IR…) to open the detail popover |
 | Remove from team | × icon on a roster row in the My Team drawer |
 | Add tier | "Add Tier" button (adds to the current tab only) |
 | Rename tier | Click the tier label and type |

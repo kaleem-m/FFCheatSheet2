@@ -653,6 +653,151 @@ body.is-dragging .player-row {
   color: var(--text-dim);
 }
 
+/* =========================
+   Injury indicator (Sleeper)
+   ========================= */
+/* Name + injury badge share a row so the small chip sits inline after the
+   name without disturbing the meta line below. */
+.player-name-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+.player-name-row .player-name { flex: 0 1 auto; }
+
+/* Severity color tokens for injuries:
+   warn = Questionable / day-to-day (amber)
+   bad  = Doubtful (deep orange)
+   out  = Out / IR / PUP / Suspended (red) */
+:root {
+  --inj-warn: #f5a623;
+  --inj-bad:  #ff7a45;
+  --inj-out:  #ef4444;
+}
+
+.injury-badge {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: 999px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  line-height: 1;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: transform 0.12s var(--ease), filter 0.12s var(--ease);
+  -webkit-tap-highlight-color: transparent;
+  white-space: nowrap;
+}
+.injury-badge i { font-size: 10px; }
+.injury-badge:active { transform: scale(0.9); }
+@media (hover: hover) {
+  .injury-badge:hover { filter: brightness(1.15); }
+}
+
+.injury-badge.sev-warn {
+  color: var(--inj-warn);
+  background: rgba(245, 166, 35, 0.13);
+  border-color: rgba(245, 166, 35, 0.4);
+}
+.injury-badge.sev-bad {
+  color: var(--inj-bad);
+  background: rgba(255, 122, 69, 0.14);
+  border-color: rgba(255, 122, 69, 0.42);
+}
+.injury-badge.sev-out {
+  color: var(--inj-out);
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.45);
+}
+
+/* Header "Injuries" button — subtle accent when it carries no special state;
+   spins while fetching. */
+.injury-btn.is-loading { opacity: 0.7; cursor: progress; }
+
+/* =========================
+   Injury detail popover
+   ========================= */
+.injury-pop {
+  position: fixed;
+  z-index: 1200;
+  width: min(280px, calc(100vw - 24px));
+  background: var(--bg-elev-2);
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  padding: 12px 13px 11px;
+  animation: inj-pop-in 0.14s var(--ease);
+  border-top-width: 3px;
+}
+@keyframes inj-pop-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.injury-pop.sev-warn { border-top-color: var(--inj-warn); }
+.injury-pop.sev-bad  { border-top-color: var(--inj-bad); }
+.injury-pop.sev-out  { border-top-color: var(--inj-out); }
+
+.injury-pop-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.injury-pop-status {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.injury-pop.sev-warn .injury-pop-status { color: var(--inj-warn); }
+.injury-pop.sev-bad  .injury-pop-status { color: var(--inj-bad); }
+.injury-pop.sev-out  .injury-pop-status { color: var(--inj-out); }
+.injury-pop-close {
+  display: grid;
+  place-items: center;
+  width: 24px; height: 24px;
+  border-radius: 7px;
+  color: var(--text-muted);
+  flex: 0 0 auto;
+}
+@media (hover: hover) {
+  .injury-pop-close:hover { background: var(--bg-elev); color: var(--text); }
+}
+.injury-pop-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.injury-pop-body {
+  font-size: 12.5px;
+  color: var(--text-dim);
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+.injury-pop-notes {
+  font-size: 12.5px;
+  color: var(--text);
+  line-height: 1.45;
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+.injury-pop-foot {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  margin-top: 9px;
+  letter-spacing: 0.01em;
+}
+
 /* Actions */
 .player-actions {
   display: flex;
