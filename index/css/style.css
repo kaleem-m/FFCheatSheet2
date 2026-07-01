@@ -126,28 +126,55 @@ h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
   font-weight: 500;
 }
 
-.header-actions { display: flex; align-items: center; gap: 8px; position: relative; }
+/* Uniform 12px rhythm between every action button; all three (plus the
+   overflow icon button) sit on one vertically-centred baseline, aligned to the
+   brand mark on the left. */
+.header-actions { display: flex; align-items: center; gap: 12px; position: relative; }
 
 .btn {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  height: 38px;
-  padding: 0 14px;
+  justify-content: center;
+  /* Consistent icon-to-label gap across all three buttons. */
+  gap: 7px;
+  height: 40px;
+  /* 10px vertical is expressed via the fixed height; 16px horizontal here. */
+  padding: 0 16px;
   border-radius: 10px;
   font-size: 14px;
   font-weight: 600;
+  line-height: 1;
   color: var(--text);
   background: transparent;
   border: 1px solid var(--border);
-  transition: all 0.18s var(--ease);
+  transition: background 0.15s var(--ease), border-color 0.15s var(--ease),
+              transform 0.15s var(--ease), box-shadow 0.15s var(--ease);
   white-space: nowrap;
 }
+/* All button icons share one size and align to the label baseline. */
+.btn > i { font-size: 18px; line-height: 1; }
 .btn:hover { background: var(--bg-elev); border-color: var(--border-strong); }
 .btn:active { transform: scale(0.97); }
+/* Visible, keyboard-only focus ring in the app's orange accent. */
+.btn:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
 
-.btn-ghost { border-color: transparent; background: var(--bg-elev); }
-.btn-ghost:hover { background: var(--bg-elev-2); }
+/* Ghost buttons in the header: subtle dark-neutral fill with a faint border,
+   consistent with the dark theme. Hover lightens the fill and brightens the
+   border for a soft, uniform lift. */
+.btn-ghost {
+  background: #1e1f23;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+.btn-ghost:hover {
+  background: #26272c;
+  border-color: rgba(255, 255, 255, 0.16);
+  transform: translateY(-1px);
+}
+.btn-ghost:active { transform: scale(0.97); }
 
 .btn-danger {
   background: var(--danger);
@@ -157,6 +184,20 @@ h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 .btn-danger:hover { background: #dc2626; }
 
 /* Menu dropdown */
+/* Keep the overflow ("⋮") trigger a square, icon-only button: same height as
+   the three action buttons, but no label padding. Sits inline in the flex row
+   so the uniform 12px gap already separates it from "My Team". */
+#menu-btn {
+  width: 40px;
+  padding: 0;
+  gap: 0;
+}
+#menu-btn > i { font-size: 18px; }
+#menu-btn[aria-expanded="true"] {
+  background: #26272c;
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
 .menu-wrap { position: relative; }
 .menu-dropdown {
   position: absolute;
@@ -695,6 +736,11 @@ body.is-dragging .player-row {
   -webkit-tap-highlight-color: transparent;
   white-space: nowrap;
 }
+/* Only render the badge for players who actually carry a designation. The JS
+   sets `hidden` on healthy players, but `display: inline-flex` above outranks
+   the UA `[hidden] { display: none }` rule — so we must restore it explicitly,
+   otherwise every healthy player shows an empty medical icon. */
+.injury-badge[hidden] { display: none; }
 .injury-badge i { font-size: 10px; }
 .injury-badge:active { transform: scale(0.9); }
 @media (hover: hover) {
@@ -876,26 +922,41 @@ body.is-dragging .player-row {
    ========================= */
 /* Header button stays a quiet ghost button; the badge is the live signal. */
 .my-team-btn { position: relative; }
+/* Count badge: a small, integrated pill sitting inline after the label with a
+   consistent left margin. Refined azure — a softer translucent fill with a
+   crisp accent-coloured numeral, so it reads as part of the button rather than
+   a bolted-on sticker. */
 .my-team-badge {
   display: inline-grid;
   place-items: center;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  margin-left: 2px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  margin-left: 8px;
   border-radius: 999px;
-  background: var(--mine);
-  color: #061325;
-  font-size: 11px;
-  font-weight: 800;
+  background: rgba(79, 158, 255, 0.18);
+  border: 1px solid rgba(79, 158, 255, 0.35);
+  color: var(--mine);
+  font-size: 11.5px;
+  font-weight: 700;
   font-family: 'JetBrains Mono', monospace;
   font-variant-numeric: tabular-nums;
   line-height: 1;
 }
+/* The badge is toggled via the `hidden` attribute in JS; restore the UA rule
+   the `display: inline-grid` above would otherwise override (so it never
+   flashes a "0" for an empty roster). */
+.my-team-badge[hidden] { display: none; }
 .my-team-btn[aria-expanded="true"] {
   color: var(--mine);
   border-color: rgba(79, 158, 255, 0.45);
   background: var(--mine-soft);
+}
+/* Keep the azure focus ring for My Team consistent with its accent, while the
+   generic .btn:focus-visible (orange) covers Injuries / Add Tier / overflow. */
+.my-team-btn:focus-visible {
+  border-color: rgba(79, 158, 255, 0.6);
+  box-shadow: 0 0 0 3px var(--mine-glow);
 }
 
 /* Meta line entry for My Team count (only shows when non-zero). */
@@ -1171,7 +1232,14 @@ body.is-dragging .player-row {
   .brand-text h1 { font-size: 16px; }
   .brand-sub { font-size: 10px; }
   .btn-label { display: none; }
-  .btn { padding: 0 12px; height: 36px; }
+  /* Icon-only on phones: keep every action button a uniform square so the row
+     stays tidy when the labels drop out. */
+  .header-actions { gap: 8px; }
+  .header-actions .btn { width: 40px; padding: 0; gap: 0; }
+  /* My Team may still carry a count pill, so let it grow past the square to fit
+     the icon + badge without clipping. */
+  .header-actions .my-team-btn { width: auto; padding: 0 12px; gap: 6px; }
+  .my-team-badge { margin-left: 4px; }
   .tabs { padding: 0 8px; }
   .tab { padding: 12px 14px; font-size: 13.5px; }
 
